@@ -1,0 +1,347 @@
+<style>
+.box{
+  width: 90%;
+  height:10%;
+  margin: 10px;
+  color: black;
+  border: 1px solid #ddd;
+  box-shadow: 0px 0px 5px #888888;
+  border-radius: 25px;
+  padding: 20px;
+  font-family: "Verdana", Arial, sans-serif;
+}
+.box:focus { 
+    outline: none;
+    border-color: #9ecaed;
+    box-shadow: 0px 0px 10px #9ecaed;
+    font-family: "Verdana", Arial, sans-serif;
+}
+.button{
+    margin: 10px;
+    padding: 10px;
+    border-radius: 25px;
+    color: "#CCCCCC";
+    font-family: "Verdana", Arial, sans-serif;
+}
+.button:focus { 
+    outline: none;
+    border-color: #9ecaed;
+    box-shadow: 0px 0px 10px #9ecaed;
+    font-family: "Verdana", Arial, sans-serif;
+}
+h1, h2{
+    font-family: "Verdana", Arial, sans-serif;
+    text-align: center;
+}
+.mainDiv {
+    width: 480px;
+    height: 800px;
+
+    position: absolute;
+    top:0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+
+    margin: auto;
+}
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script>
+var recognizing = false;
+var voices = window.speechSynthesis.getVoices();
+
+var bargeInOff = true;
+
+//Auxiliary function. Returns a boolean
+function isContainedIn(arrayS, arrayD){
+    for (var i = 0; i < arrayD.length; i++) {
+        for (var j = 0; j < arrayD.length; j++) {
+            if(arrayS[i] == arrayD[j]){ return true; }
+        }
+    }
+    return false;
+}
+
+//Auxiliary function. Returns an array
+function getRightTranscript(arrayS, arrayD){
+    for (var i = 0; i < arrayD.length; i++) {
+        for (var j = 0; j < arrayD.length; j++) {
+            if(arrayS[i] == arrayD[j]){ return arrayS[i]; }
+        }
+    }
+    return arrayS[0];
+}
+
+//Stop speaking, please
+function stopSpeaking(){
+    document.getElementById("OUTPUT_BUTTON").style.background='#CCCCCC';
+    window.speechSynthesis.cancel();
+}
+
+//Stop listening, please
+function stopListening() {
+    document.getElementById("ASR_BUTTON").style.background='#CCCCCC';
+    recognizing = false;
+    console.log('ASR stopped recognizing');
+};
+
+//Start ASR button
+function onStartASR(event) {
+    document.getElementById("ASR_BUTTON").style.background='#f44';
+    listen(function(transcript, confidence){
+        var content = {'asrResult': transcript, 'asrConfidence': confidence};
+        send(content, "start", dialogueManager);
+    });
+    console.log('onStartASR Pressed to start recognition');
+}
+
+//Start TTS button
+function onStartTTS(event){
+    var content = {'asrResult': $("#TTSDiv").text(), 'asrConfidence': 1};
+    var message = "start";
+	send(content, message, dialogueManager);
+}
+
+function send(messageContent, messageStatus, callback){
+    console.log("Sending a ", messageContent ," message [", messageStatus, "]");
+    var base_url = "controller.php";
+    var params = { content: messageContent, status: messageStatus};
+    var decodeParams = $.param( params );
+    var url = base_url + "?" + decodeParams;
+    $.getJSON(url + '&callback=?', callback);
+}
+
+function dialogueManager(json) {
+    var results = json.results;
+    var message = json.message;
+    console.log("Json:", json);
+    
+    console.log("[Dialogue manager incoming message]: ", message);
+    switch (message) {
+        case 'askForUCConfirmation':
+            askForUCConfirmation(results, function(intent, confident){
+                var content = {'UC_result': intent, 'confident': confident};
+                var status = message;
+                send(content, status, dialogueManager);
+            });
+            break;
+        // case 'ask_target':
+        //     ask(results, function(tag, confident, target){
+        //         var content = {'tag': tag, 'confident': confident, 'target': target};
+        //         var status = message;
+        //         send(content, status, dialogueManager);
+        //     });
+        //     break;
+        case 'askForSLUConfirmation':
+            askForSLUConfirmation(results, function(tag, confident, target){
+                var content = {'tag': tag, 'confident': confident, 'target': target};
+                var status = message;
+                send(content, status, dialogueManager);
+            });
+            break;
+        default:
+            var response = results['response'];
+            console.log("RESPONSE: ", response);
+
+            if(response == null){
+                message = "Sorry, I don't have an answer to your question yet.";
+                speak(message);
+            }
+            else if(response.startsWith("=")){
+                message = "I don't know the answer yet! Let me google that for you!";
+                document.getElementById('OutputDiv').innerHTML = message;
+                speak(message, bargeInOff, function(){
+                    window.open("https://www.google.it/search?q"+response.replace("_","+").replace(".","+"));
+                })
+            }
+            else{
+                document.getElementById('OutputDiv').innerHTML = response;
+                //$("Output").update(response);
+                speak(response);
+                break;
+            }
+    }
+}
+
+var listen = function(callback){
+    var ASR = new webkitSpeechRecognition();
+    ASR.interimResults = false;
+    ASR.lang='en-US';
+    ASR.maxAlternatives=10;
+    ASR.continuous = false;
+
+    // Start
+    ASR.start();
+
+    // on start
+    ASR.onstart = function() {
+        recognizing = true;
+        console.log('ASR started recognizing');
+    };
+
+
+    ASR.onend = function() {
+        recognizing = false;
+        document.getElementById("ASR_BUTTON").style.background='#CCCCCC';
+        console.log('ASR stopped recognizing');
+    };
+
+    ASR.onerror = function(event) {
+        console.log("ASR error");
+        console.log(event);
+    };
+
+    ASR.onresult = function(event) {
+        stopSpeaking();
+        console.log(event);
+        for (var i = 0; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                for (var j = 0; j < event.results[i].length; ++j) {
+                    transcript=event.results[i][j].transcript;
+                    confidence=event.results[i][j].confidence;
+                    console.log('ASR result: '+transcript+' ASR conf: '+confidence);
+                }
+                best_transcript=event.results[0][0].transcript;
+                best_confidence=event.results[0][0].confidence;
+                document.getElementById('ASRDiv').innerHTML = best_transcript;
+                callback(best_transcript, best_confidence);
+            }
+        }
+        document.getElementById("ASR_BUTTON").style.background='#CCCCCC';
+    };
+
+};
+
+var speak = function(textToSpeak, wait, callback){
+    var TTS = new SpeechSynthesisUtterance();
+    voices = window.speechSynthesis.getVoices();
+    TTS.lang = 'en-GB';
+    TTS.pitch = 0; //0 to 2
+    TTS.voice = voices[3]; //Not all supported
+    TTS.voiceURI = 'native';
+    TTS.volume = 1.2; // 0 to 1
+    TTS.rate = 1; // 0.1 to 10
+    TTS.text = textToSpeak;
+
+    if(!wait && callback){
+        callback();
+    }
+
+    document.getElementById("OUTPUT_BUTTON").style.background='#f44';
+    window.speechSynthesis.speak(TTS);
+    TTS.onend = function(event) {
+        document.getElementById("OUTPUT_BUTTON").style.background='#CCCCCC';
+        console.log('I said: "', textToSpeak, '"');
+        if (wait && callback) callback();
+    }
+};
+
+function askForUCConfirmation(elements, callback){
+    console.log(elements);
+    var message = "I did not understand. Were you searching for "
+    var intents = [];
+    elements.forEach(function(ele) {
+        var intent = ele[0];
+        intents.push(intent);
+        if(intent.startsWith("a")){
+            message += "an " + intent + ", or ";
+        }
+        else{
+            message += "a " + intent + ", or ";
+        }
+    });
+    message = message.substr(0, message.length - 5);
+    message += "?";
+
+    message = message.replace("_", " ");
+
+    document.getElementById('OutputDiv').innerHTML = message;
+
+    speak(message, bargeInOff, function(){
+        listen(function(transcript, confidence){
+            var tempTranscript = transcript.split(" ");
+            var found = false;
+
+            console.log("[askForUCConfirmation]: intents: " + intents);
+            console.log("[askForUCConfirmation]: transcript: " + tempTranscript);
+            if (isContainedIn(intents, tempTranscript)) {
+            //if (intents.indexOf(transcript) > -1) {
+                //In the array!
+                transcript = getRightTranscript(intents, tempTranscript)
+                
+                message = "Got it.";// You are asking for " + transcript;
+                document.getElementById('OutputDiv').innerHTML = message;
+                speak(message, bargeInOff, function(){
+                    callback(transcript, true);
+                });
+            } else {
+                //Not in the array
+                callback(transcript, false);
+            }
+        });
+    });
+};
+
+// function ask(element, callback){
+//     console.log(element);
+//     var message = "I have never heard about " + element + " . What is it?";
+//     speak(message, function(){
+//         listen(function(transcript, confidence){
+//             callback(transcript, false, element);
+//         });
+//     });
+// };
+
+function askForSLUConfirmation(element, callback){
+    console.log(element);
+    var tags = element['tag'].split(".");
+    var tag = tags[0];
+    var text = element['text'];
+    var message = "Fine, is " + text + " a " + tag +  "?";
+    document.getElementById('OutputDiv').innerHTML = message;
+    speak(message, bargeInOff, function(){
+        listen(function(transcript, confidence){
+            transcript = transcript.toLowerCase();
+            if (transcript.indexOf('no') > -1) {
+                // no
+                var message = "So, what is it?";
+                document.getElementById('OutputDiv').innerHTML = message;
+                speak(message, bargeInOff, function(){
+                    listen(function(transcript, confidence){
+                        // send back the transcript   
+                        callback(transcript, false, text);     
+                    });
+                });
+            } else {
+                // yes
+                // send back the tag
+                callback(tag, true, text);
+            }
+        });
+    });
+};
+
+
+</script>
+
+<div class="mainDiv">
+<h1> Spoken Dialogue System</h1>
+<h2> Speech input</h1>
+<div id="ASRDiv" class="box"></div>
+
+<button id="ASR_BUTTON" class="button" onclick="onStartASR(event)">START SPEAKING</button>
+<button id="ASR_BUTTON_STOP" class="button" onclick="stopListening()">STOP SPEAKING</button>
+
+<h2> Textual input</h1>
+<div id="TTSDiv" class="box"  contentEditable="true"></div>
+
+<button id="TTS_BUTTON" class="button" onclick="onStartTTS(event)">SEND REQUEST</button>
+
+<h2> Textual Output</h1>
+<div id="OutputDiv" class="box"></div>
+
+<div class=buttonDiv>
+<button id="OUTPUT_BUTTON" class="button" onclick="stopSpeaking()">STOP SPEAKING</button>
+</div>
+</div>

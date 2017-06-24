@@ -1,0 +1,89 @@
+<style>
+.box{
+  width: 90%;
+  height:20%;
+  margin: 10px;
+  color: black;
+  border: 1px solid #ddd;
+}
+</style>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+<script>
+var recognizing = false;
+var ASR = new webkitSpeechRecognition();
+var TTS = new SpeechSynthesisUtterance();
+var voices = window.speechSynthesis.getVoices();
+
+ASR.interimResults = false;
+ASR.lang='en-US';
+ASR.maxAlternatives=10;
+ASR.continuous = false;
+
+ASR.onstart = function() {
+    recognizing = true;
+    console.log('started recognition');
+    $("#ASR_BUTTON").html('STOP ASR');
+};
+
+
+ASR.onend = function() {
+    recognizing = false;
+    console.log('stopped recognition');
+    $("#ASR_BUTTON").html('START ASR');
+};
+
+ASR.onresult = function(event) {
+    console.log(event);
+    for (var i = 0; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+            for (var j = 0; j < event.results[i].length; ++j) {
+                transcript=event.results[i][j].transcript;
+                confidence=event.results[i][j].confidence;
+                console.log('result:'+transcript+' conf:'+confidence);
+            }
+            best_transcript=event.results[0][0].transcript;
+            $("#ASRDiv").html(best_transcript);
+        }
+    }
+};
+
+function onStartASR(event) {
+    ASR.start();
+    console.log('onStartASR Pressed to start recognition');
+}
+
+ASR.onerror = function(event) {
+    console.log(event);
+};
+
+function onStartTTS(event){
+    voices = window.speechSynthesis.getVoices();
+    for(var i = 0; i < voices.length; i++ ) {
+        console.log(voices);
+    }
+    TTS.lang = 'en-US';
+    TTS.pitch = 0; //0 to 2
+    TTS.voice = voices[1]; //Not all supported
+    TTS.voiceURI = 'native';
+    TTS.volume = 1; // 0 to 1
+    TTS.rate = 1; // 0.1 to 10
+    TTS.text = $("#TTSDiv").text();
+    window.speechSynthesis.speak(TTS);
+}
+
+</script>
+
+<h2> ASR:</h1>
+<div id="ASRDiv" class="box"></div>
+
+<button id="ASR_BUTTON" onclick="onStartASR(event)">START ASR</button>
+
+<h2> TTS:</h1>
+<div id="TTSDiv" class="box"  contentEditable="true"></div>
+
+<button id="TTS_BUTTON" onclick="onStartTTS(event)">START TTS</button>
+
+
+

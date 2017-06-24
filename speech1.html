@@ -1,0 +1,63 @@
+<style>
+.box{
+  width: 90%;
+  height:20%;
+  margin: 10px;
+  color: black;
+  border: 1px solid #ddd;
+}
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script>
+var recognizing = false;
+var TTS = new SpeechSynthesisUtterance();
+var ASR = new webkitSpeechRecognition();
+ASR.lang='en-US';
+
+ASR.onstart = function() {
+    recognizing = true;
+    console.log('started recognition');
+    $("#ASR_BUTTON").html('STOP ASR');
+};
+
+
+ASR.onend = function() {
+    recognizing = false;
+    console.log('stopped recognition');
+    $("#ASR_BUTTON").html('START ASR');
+};
+
+ASR.onresult = function(event) {
+    console.log(event);
+    best_transcript=event.results[0][0].transcript;
+    $("#ASRDiv").html(best_transcript);
+};
+
+
+function onStartASR(event) {
+    ASR.start();
+    console.log('onStartASR Pressed to start recognition');
+}
+
+
+function onStartTTS(event){
+  var voices = window.speechSynthesis.getVoices();
+  TTS.lang = 'en-GB';
+  TTS.text =  $("#TTSDiv").text();;
+  speechSynthesis.speak(TTS);
+}
+
+</script>
+
+<h2> ASR:</h1>
+<div id="ASRDiv" class="box"></div>
+
+<button id="ASR_BUTTON" onclick="onStartASR(event)">START ASR</button>
+
+<h2> TTS:</h1>
+<div id="TTSDiv" class="box"  contentEditable="true"></div>
+
+<button id="TTS_BUTTON" onclick="onStartTTS(event)">START TTS</button>
+
+
+
