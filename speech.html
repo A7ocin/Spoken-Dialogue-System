@@ -88,7 +88,7 @@ function stopListening() {
 
 //Start ASR button
 function onStartASR(event) {
-    document.getElementById("ASR_BUTTON").style.background='#f44';
+    document.getElementById("ASR_BUTTON").style.background='#F6C571';
     listen(function(transcript, confidence){
         var content = {'asrResult': transcript, 'asrConfidence': confidence};
         send(content, "start", dialogueManager);
@@ -228,7 +228,7 @@ var speak = function(textToSpeak, wait, callback){
         callback();
     }
 
-    document.getElementById("OUTPUT_BUTTON").style.background='#f44';
+    document.getElementById("OUTPUT_BUTTON").style.background='#F6C571';
     window.speechSynthesis.speak(TTS);
     TTS.onend = function(event) {
         document.getElementById("OUTPUT_BUTTON").style.background='#CCCCCC';
@@ -322,6 +322,12 @@ function askForSLUConfirmation(element, callback){
     });
 };
 
+function toggleCheckbox(element)
+{
+    element.checked = !element.checked;
+    bargeInOff = !bargeInOff;
+}
+
 
 </script>
 
@@ -332,6 +338,10 @@ function askForSLUConfirmation(element, callback){
 
 <button id="ASR_BUTTON" class="button" onclick="onStartASR(event)">START SPEAKING</button>
 <button id="ASR_BUTTON_STOP" class="button" onclick="stopListening()">STOP SPEAKING</button>
+<label for="check" onclick="toggleCheckbox(this);">
+  <input type="checkbox" id="check" name="check" title="Barge in">
+  Barge in
+</label>
 
 <h2> Textual input</h1>
 <div id="TTSDiv" class="box"  contentEditable="true"></div>
