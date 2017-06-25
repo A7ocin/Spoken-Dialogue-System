@@ -31,7 +31,7 @@
 
     //Thresholds
     $UC_th  = 0.93;
-    $SLU_th = 0.87;
+    $SLU_th = 0.89;
 
 
     //Check if the SLU confidence is above the threshold
