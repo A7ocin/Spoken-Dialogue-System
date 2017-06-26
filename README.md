@@ -11,9 +11,7 @@ Language Understanding Systems Project: Movie Domain Spoken Dialogue System
 2) Give the user read and write permissions to the cloned folder
 3) Open Chrome and go to http://localhost/lusProject/speech.html (I named the folder lusProject)
 
-## Video
+## Video (https://www.youtube.com/watch?v=6WH3m0Krvgk)
 <a href="http://www.youtube.com/watch?feature=player_embedded&v=6WH3m0Krvgk
 " target="_blank"><img src="http://img.youtube.com/vi/6WH3m0Krvgk/0.jpg" 
-alt="IMAGE ALT TEXT HERE" width="1280" height="720" border="10" /></a>
-
-![alt text](https://user-images.githubusercontent.com/5605902/27517660-423658a8-59d0-11e7-8987-4d56c20f4be2.png)
+alt="IMAGE ALT TEXT HERE" width="1920" height="1080" border="10" /></a>
